@@ -1,2 +1,2 @@
 # Map Editor
-This kinda shit
+This is kinda shit because its my first time making anything in pygame
