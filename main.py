@@ -17,7 +17,7 @@ clock = pygame.time.Clock()
 running = True
 dt = 0
 
-preview = pygame.Surface((50, 50))
+preview = pygame.image.load("assets/textures/preview.png").convert_alpha() #pygame.Surface((50, 50))
 
 def prompt_file(name = "exportedMap", write = False):
     top = tkinter.Tk()
@@ -40,6 +40,7 @@ def export():
         exportArray.append({
             "Shape": object.Shape,
             "Colour": (object.Colour.r, object.Colour.g, object.Colour.b),
+            "Texture": object.Texture,
             "Position": (object.Object.x, object.Object.y)
         })
 
@@ -67,10 +68,19 @@ def load(file = None):
         print(object)
         newObject = eng.Object(pygame.Vector2(0, 0))
         newObject.Object.update(object["Position"][0], object["Position"][1], 50, 50)
-    
+        newObject.Texture = object["Texture"]
+
+def fillPreserve(surface, color):
+    w, h = surface.get_size()
+    r, g, b, _ = color
+    for x in range(w):
+        for y in range(h):
+            a = surface.get_at((x, y))[3]
+            surface.set_at((x, y), pygame.Color(r, g, b, a))
 
 while running:
     screen.fill("black")
+    fillPreserve(preview, pygame.Color((255, 255, 255)))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -98,8 +108,10 @@ while running:
     if pygame.mouse.get_pressed()[0]:
         if colliding == False:
             newObject = eng.Object(pygame.Vector2(0, 0))
+            newObject.Texture = "assets/textures/blocks/brick.png"
             newObject.Object.update(position.x, position.y, 50, 50)
     elif pygame.mouse.get_pressed()[2]:
+        fillPreserve(preview, pygame.Color(255, 0, 0))
         if colliding == True:
             for object in eng.workspace:
                 if object.Object.x == position.x and object.Object.y == position.y:
@@ -109,12 +121,15 @@ while running:
     #Render Objects
     for object in eng.workspace:
         if object.Shape == "Rectangle":
-            pygame.draw.rect(screen, object.Colour, object.Object)
+            if not object.Texture == None:
+                surfaceObject = pygame.image.load(object.Texture).convert_alpha()
+                screen.blit(surfaceObject, (object.Object.x, object.Object.y))
+            else:
+                pygame.draw.rect(screen, object.Colour, object.Object)
         elif object.Shape == "Circle":
             pygame.draw.circle(screen, object.Colour, pygame.Vector2(object.Object.x, object.Object.y), object.Object.w)
 
-    preview.set_alpha(115)
-    preview.fill((255, 255, 255))
+    preview.set_alpha(150)
     screen.blit(preview, (position.x, position.y))
 
     pygame.display.flip()

@@ -10,6 +10,7 @@ class Object:
         self.Shape = "Rectangle"
         self.Object = pygame.Rect(self.Position.x, self.Position.y, 10, 10)
         self.Colour = pygame.Color(255, 255, 255)
+        self.Texture = None
     def Destroy(self):
         workspace.pop(self.Id)
     def Scale(self, newSize):
