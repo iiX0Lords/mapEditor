@@ -20,3 +20,32 @@ class Object:
 class Entity(Object):
     def __init__(self, position):
         Object.__init__(self, position)
+
+
+class Camera():
+    def __init__(self, position):
+        self.pos = position
+        self.zoom = 1
+        self.keys = {
+            "w" : False,
+            "s" : False,
+            "a" : False,
+            "d" : False,
+        }
+    def update(self):
+        if self.keys["w"]:
+            self.pos += pygame.Vector2(0, 50)
+        if self.keys["s"]:
+            self.pos += pygame.Vector2(0, -50)
+        if self.keys["a"]:
+            self.pos += pygame.Vector2(50, 0)
+        if self.keys["d"]:
+            self.pos += pygame.Vector2(-50, 0)
+        #print(self.pos)
+    def offset(self, x):
+        return x - self.zoom
+    def positionOffset(self, x, horizontal):
+        if horizontal:
+            return x - self.pos.x
+        else:
+            return x - self.pos.y

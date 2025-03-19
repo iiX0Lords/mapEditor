@@ -11,13 +11,15 @@ pygame.init()
 pygame.display.set_caption("Map qEditor")
 pygame.display.set_icon(pygame.image.load("icon.png"))
 
-screen = pygame.display.set_mode((1280, 720))
+display = pygame.display.set_mode((1280, 720))
+screen = pygame.surface.Surface( (1280, 720) )
+cam = eng.Camera(pygame.Vector2(0, 0))
 clock = pygame.time.Clock()
 
 running = True
 dt = 0
 
-preview = pygame.image.load("assets/textures/preview.png").convert_alpha() #pygame.Surface((50, 50))
+preview = pygame.image.load("assets/textures/preview.png").convert_alpha()
 
 def prompt_file(name = "exportedMap", write = False):
     top = tkinter.Tk()
@@ -50,7 +52,6 @@ def export():
         return
     file.write(json.dumps(exportArray))
         
-
 def load(file = None):
     if file == None:
         file = prompt_file()
@@ -80,28 +81,57 @@ def fillPreserve(surface, color):
 
 while running:
     screen.fill("black")
-    fillPreserve(preview, pygame.Color((255, 255, 255)))
+    #fillPreserve(preview, pygame.Color((255, 255, 255)))
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w:
-                export()
+                cam.keys["w"] = True
             elif event.key == pygame.K_s:
-                load()
+                cam.keys["s"] = True
+            if event.key == pygame.K_a:
+                cam.keys["a"] = True
+            elif event.key == pygame.K_d:
+                cam.keys["d"] = True
             elif event.key == pygame.K_k:
-                load("export.json")
+                export()
+            elif event.key == pygame.K_l:
+                load()
         if event.type == pygame.KEYUP:
-            pass
+            if event.key == pygame.K_w:
+                cam.keys["w"] = False
+            elif event.key == pygame.K_s:
+                cam.keys["s"] = False
+            if event.key == pygame.K_a:
+                cam.keys["a"] = False
+            elif event.key == pygame.K_d:
+                cam.keys["d"] = False
+        if event.type == pygame.MOUSEWHEEL:
+            cam.zoom += event.y / 10
+            print(cam.zoom)
 
     x,y = pygame.mouse.get_pos()
+    #x,y = x * cam.zoom, y * cam.zoom
+    #x,y = x - cam.pos.x, y - cam.pos.y
+
     colliding = False
 
+    cam.update()
+    #cam.pos = pygame.Vector2(snap(cam.pos.x, 10), snap(cam.pos.y, 10))
+
+    position = pygame.Vector2(
+        x,
+        y
+    )
+
     position = pygame.Vector2(snap(x - 25, 50), snap(y - 25, 50))
+    
 
     for object in eng.workspace:
-        if object.Object.collidepoint(x, y):
+        if object.Object.collidepoint(x - cam.pos.x, y - cam.pos.y):
             colliding = True
 
     pygame.event.get()
@@ -109,9 +139,10 @@ while running:
         if colliding == False:
             newObject = eng.Object(pygame.Vector2(0, 0))
             newObject.Texture = "assets/textures/blocks/brick.png"
-            newObject.Object.update(position.x, position.y, 50, 50)
+            newObject.Object.update(position.x - cam.pos.x, position.y - cam.pos.y, 50, 50)
+            print("new")
     elif pygame.mouse.get_pressed()[2]:
-        fillPreserve(preview, pygame.Color(255, 0, 0))
+        #fillPreserve(preview, pygame.Color(255, 0, 0))
         if colliding == True:
             for object in eng.workspace:
                 if object.Object.x == position.x and object.Object.y == position.y:
@@ -123,15 +154,29 @@ while running:
         if object.Shape == "Rectangle":
             if not object.Texture == None:
                 surfaceObject = pygame.image.load(object.Texture).convert_alpha()
-                screen.blit(surfaceObject, (object.Object.x, object.Object.y))
-            else:
-                pygame.draw.rect(screen, object.Colour, object.Object)
+                image_center = surfaceObject.get_rect().center
+                surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w, object.Object.h))
+                screen.blit(surfaceObject, (
+                (object.Object.x + cam.pos.x)
+                ,
+                (object.Object.y + cam.pos.y)
+                ))
         elif object.Shape == "Circle":
-            pygame.draw.circle(screen, object.Colour, pygame.Vector2(object.Object.x, object.Object.y), object.Object.w)
+            pass
 
     preview.set_alpha(150)
+    preview = pygame.transform.scale(preview, pygame.Vector2(50, 50))
+    #screen.blit(preview, (cam.offset(position.x), cam.offset(position.y)))
     screen.blit(preview, (position.x, position.y))
 
+    surface_mod = screen.copy()
+    surface_mod_rect = surface_mod.get_rect()
+    surface_mod = pygame.transform.rotozoom(surface_mod, 0, cam.zoom)
+    surface_mod_rect = surface_mod.get_rect()
+
+    display.fill("black")
+
+    display.blit(surface_mod, surface_mod_rect)
     pygame.display.flip()
 
     dt = clock.tick(60) / 1000
