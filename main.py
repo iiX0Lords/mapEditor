@@ -145,7 +145,7 @@ while running:
         #fillPreserve(preview, pygame.Color(255, 0, 0))
         if colliding == True:
             for object in eng.workspace:
-                if object.Object.x == position.x and object.Object.y == position.y:
+                if object.Object.x == position.x - cam.pos.x and object.Object.y == position.y - cam.pos.y:
                     index = eng.workspace.index(object)
                     eng.workspace.pop(index)
 
@@ -169,14 +169,9 @@ while running:
     #screen.blit(preview, (cam.offset(position.x), cam.offset(position.y)))
     screen.blit(preview, (position.x, position.y))
 
-    surface_mod = screen.copy()
-    surface_mod_rect = surface_mod.get_rect()
-    surface_mod = pygame.transform.rotozoom(surface_mod, 0, cam.zoom)
-    surface_mod_rect = surface_mod.get_rect()
-
     display.fill("black")
 
-    display.blit(surface_mod, surface_mod_rect)
+    display.blit(screen, screen.get_rect())
     pygame.display.flip()
 
     dt = clock.tick(60) / 1000
