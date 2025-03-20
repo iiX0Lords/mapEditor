@@ -12,7 +12,7 @@ pygame.display.set_caption("Map qEditor")
 pygame.display.set_icon(pygame.image.load("icon.png"))
 
 display = pygame.display.set_mode((1280, 720))
-screen = pygame.surface.Surface( (1280, 720) )
+screen = pygame.surface.Surface( (display.get_width(), display.get_height()) )
 cam = eng.Camera(pygame.Vector2(0, 0))
 clock = pygame.time.Clock()
 
@@ -153,6 +153,10 @@ while running:
     for object in eng.workspace:
         if object.Shape == "Rectangle":
             if not object.Texture == None:
+                if object.Object.x + cam.pos.x < 0 or object.Object.x + cam.pos.x > display.get_width():
+                    continue
+                if object.Object.y + cam.pos.y < 0 or object.Object.y + cam.pos.y > display.get_height():
+                    continue
                 surfaceObject = pygame.image.load(object.Texture).convert_alpha()
                 image_center = surfaceObject.get_rect().center
                 surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w, object.Object.h))
