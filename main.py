@@ -68,8 +68,9 @@ def load(file = None):
     for object in openedArray:
         print(object)
         newObject = eng.Object(pygame.Vector2(0, 0))
-        newObject.Object.update(object["Position"][0], object["Position"][1], 50, 50)
+        newObject.Object.update(object["Position"][0], object["Position"][1], 32, 32)
         newObject.Texture = object["Texture"]
+        newObject.update()
 
 def fillPreserve(surface, color):
     w, h = surface.get_size()
@@ -127,7 +128,7 @@ while running:
         y
     )
 
-    position = pygame.Vector2(snap(x - 25, 50), snap(y - 25, 50))
+    position = pygame.Vector2(snap(x - 16, 32), snap(y - 16, 32))
     
 
     for object in eng.workspace:
@@ -139,8 +140,8 @@ while running:
         if colliding == False:
             newObject = eng.Object(pygame.Vector2(0, 0))
             newObject.Texture = "assets/textures/blocks/brick.png"
-            newObject.Object.update(position.x - cam.pos.x, position.y - cam.pos.y, 50, 50)
-            print("new")
+            newObject.Object.update(position.x - cam.pos.x, position.y - cam.pos.y, 32, 32)
+            newObject.update()
     elif pygame.mouse.get_pressed()[2]:
         #fillPreserve(preview, pygame.Color(255, 0, 0))
         if colliding == True:
@@ -157,8 +158,7 @@ while running:
                     continue
                 if object.Object.y + cam.pos.y < 0 or object.Object.y + cam.pos.y > display.get_height():
                     continue
-                surfaceObject = pygame.image.load(object.Texture).convert_alpha()
-                image_center = surfaceObject.get_rect().center
+                surfaceObject = object.Image #pygame.image.load(object.Texture).convert_alpha()
                 surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w, object.Object.h))
                 screen.blit(surfaceObject, (
                 (object.Object.x + cam.pos.x)
@@ -169,7 +169,7 @@ while running:
             pass
 
     preview.set_alpha(150)
-    preview = pygame.transform.scale(preview, pygame.Vector2(50, 50))
+    preview = pygame.transform.scale(preview, pygame.Vector2(32, 32))
     #screen.blit(preview, (cam.offset(position.x), cam.offset(position.y)))
     screen.blit(preview, (position.x, position.y))
 

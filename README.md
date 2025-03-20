@@ -11,6 +11,6 @@ Made using python 3.12.4
   - Tool selection & properties
 - Collision Exporting
 - Decorations
-- Optimise
+- ~~Optimise~~
 - Refactor
 - Tools
