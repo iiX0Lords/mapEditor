@@ -5,14 +5,14 @@ import json
 import os
 import tkinter
 import tkinter.filedialog
+import numpy as np
 
 pygame.init()
 
 pygame.display.set_caption("Map qEditor")
 pygame.display.set_icon(pygame.image.load("icon.png"))
 
-display = pygame.display.set_mode((1280, 720))
-screen = pygame.surface.Surface( (display.get_width(), display.get_height()) )
+screen = pygame.display.set_mode((1280, 720))
 cam = eng.Camera(pygame.Vector2(0, 0))
 clock = pygame.time.Clock()
 
@@ -69,8 +69,7 @@ def load(file = None):
         print(object)
         newObject = eng.Object(pygame.Vector2(0, 0))
         newObject.Object.update(object["Position"][0], object["Position"][1], 32, 32)
-        newObject.Texture = object["Texture"]
-        newObject.update()
+        newObject.Texture(object["Texture"])
 
 def fillPreserve(surface, color):
     w, h = surface.get_size()
@@ -79,6 +78,33 @@ def fillPreserve(surface, color):
         for y in range(h):
             a = surface.get_at((x, y))[3]
             surface.set_at((x, y), pygame.Color(r, g, b, a))
+
+def screenSpace(pos):
+    return np.array([
+        [1,0,pos.x],
+        [0,1,pos.y],
+        [0,0,1]]
+        )
+def screen_to_world(screen_x, screen_y):
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    scale_x, scale_y = cam.zoom, cam.zoom
+    camera_x, camera_y = cam.pos.x, cam.pos.y
+    normalized_x = (screen_x - screen_width / 2) / scale_x
+    normalized_y = (screen_y - screen_height / 2) / scale_y
+
+    world_x = normalized_x + camera_x
+    world_y = normalized_y + camera_y
+    
+    return world_x, world_y
+
+def world_to_screen(world_x, world_y):
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    scale_x, scale_y = cam.zoom, cam.zoom
+    camera_x, camera_y = cam.pos.x, cam.pos.y
+    screen_x = (world_x - camera_x) * scale_x + screen_width / 2
+    screen_y = (world_y - camera_y) * scale_y + screen_height / 2
+    
+    return screen_x, screen_y
 
 while running:
     screen.fill("black")
@@ -112,70 +138,71 @@ while running:
                 cam.keys["d"] = False
         if event.type == pygame.MOUSEWHEEL:
             cam.zoom += event.y / 10
+            if cam.zoom >= 2.0:
+                cam.zoom = 2.0
+            elif cam.zoom <= 0.2:
+                cam.zoom = 0.2
             print(cam.zoom)
 
     x,y = pygame.mouse.get_pos()
-    #x,y = x * cam.zoom, y * cam.zoom
-    #x,y = x - cam.pos.x, y - cam.pos.y
+    x = x - (preview.get_width() / 2)
+    y = y - (preview.get_height() / 2)
 
     colliding = False
 
     cam.update()
-    #cam.pos = pygame.Vector2(snap(cam.pos.x, 10), snap(cam.pos.y, 10))
-
-    position = pygame.Vector2(
-        x,
-        y
-    )
-
-    position = pygame.Vector2(snap(x - 16, 32), snap(y - 16, 32))
     
+    mouseWorld = pygame.Vector2(screen_to_world(x, y))
+    mouseWorld = pygame.Vector2(snap(mouseWorld.x, 32), snap(mouseWorld.y, 32))
+    position = pygame.Vector2(world_to_screen(mouseWorld.x, mouseWorld.y))
 
     for object in eng.workspace:
-        if object.Object.collidepoint(x - cam.pos.x, y - cam.pos.y):
+        if object.Object.collidepoint(mouseWorld.x, mouseWorld.y):
             colliding = True
 
     pygame.event.get()
     if pygame.mouse.get_pressed()[0]:
         if colliding == False:
             newObject = eng.Object(pygame.Vector2(0, 0))
-            newObject.Texture = "assets/textures/blocks/brick.png"
-            newObject.Object.update(position.x - cam.pos.x, position.y - cam.pos.y, 32, 32)
-            newObject.update()
+            newObject.Texture("assets/textures/blocks/brick.png")
+            world_x, world_y = screen_to_world(x, y)
+            newObject.Object.update(mouseWorld.x, mouseWorld.y, 32, 32)
+
     elif pygame.mouse.get_pressed()[2]:
-        #fillPreserve(preview, pygame.Color(255, 0, 0))
         if colliding == True:
             for object in eng.workspace:
-                if object.Object.x == position.x - cam.pos.x and object.Object.y == position.y - cam.pos.y:
+                if object.Object.x == mouseWorld.x and object.Object.y == mouseWorld.y:
                     index = eng.workspace.index(object)
                     eng.workspace.pop(index)
 
     #Render Objects
     for object in eng.workspace:
         if object.Shape == "Rectangle":
-            if not object.Texture == None:
-                if object.Object.x + cam.pos.x < 0 or object.Object.x + cam.pos.x > display.get_width():
+            if not object.ImageTexture == None:
+                local = pygame.Vector2(world_to_screen(object.Object.x, object.Object.y))
+                if local.x < 0 or local.x > screen.get_width():
                     continue
-                if object.Object.y + cam.pos.y < 0 or object.Object.y + cam.pos.y > display.get_height():
+                if local.y < 0 or local.y > screen.get_height():
                     continue
-                surfaceObject = object.Image #pygame.image.load(object.Texture).convert_alpha()
-                surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w, object.Object.h))
+                surfaceObject = object.Image
+
+                surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w * cam.zoom, object.Object.h * cam.zoom))
+                zoomPos = pygame.Vector2(world_to_screen(object.Object.x, object.Object.y))
                 screen.blit(surfaceObject, (
-                (object.Object.x + cam.pos.x)
+                zoomPos.x
                 ,
-                (object.Object.y + cam.pos.y)
+                zoomPos.y
                 ))
         elif object.Shape == "Circle":
             pass
 
     preview.set_alpha(150)
-    preview = pygame.transform.scale(preview, pygame.Vector2(32, 32))
-    #screen.blit(preview, (cam.offset(position.x), cam.offset(position.y)))
-    screen.blit(preview, (position.x, position.y))
+    preview = pygame.transform.scale(preview, pygame.Vector2(32 * cam.zoom, 32 * cam.zoom))
 
-    display.fill("black")
+    previewPosition = position
 
-    display.blit(screen, screen.get_rect())
+    screen.blit(preview, (previewPosition.x, previewPosition.y))
+
     pygame.display.flip()
 
     dt = clock.tick(60) / 1000

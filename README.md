@@ -4,7 +4,7 @@ This is kinda shit because its my first time making anything in pygame
 Made using python 3.12.4
 
 # Todo
-- Add zooming out & in
+- ~~Add zooming out & in~~
 - UI
   - Block selection panel
   - Exporting panel
