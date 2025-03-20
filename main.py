@@ -5,7 +5,6 @@ import json
 import os
 import tkinter
 import tkinter.filedialog
-import numpy as np
 
 pygame.init()
 
