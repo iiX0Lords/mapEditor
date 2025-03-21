@@ -51,3 +51,12 @@ class Camera():
             return x - self.pos.x
         else:
             return x - self.pos.y
+        
+
+class Brush:
+    def __init__(self):
+        self.size = 1,
+    def paint(self, pos, texture):
+        newObject = Object(pygame.Vector2(0, 0))
+        newObject.Texture(texture)
+        newObject.Object.update(pos.x, pos.y, 32, 32)

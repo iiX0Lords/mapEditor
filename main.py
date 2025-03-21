@@ -11,7 +11,7 @@ pygame.init()
 pygame.display.set_caption("Map qEditor")
 pygame.display.set_icon(pygame.image.load("icon.png"))
 
-screen = pygame.display.set_mode((1280, 720))
+screen = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 cam = eng.Camera(pygame.Vector2(0, 0))
 clock = pygame.time.Clock()
 
@@ -41,7 +41,7 @@ def export():
         exportArray.append({
             "Shape": object.Shape,
             "Colour": (object.Colour.r, object.Colour.g, object.Colour.b),
-            "Texture": object.Texture,
+            "ImageTexture": object.ImageTexture,
             "Position": (object.Object.x, object.Object.y)
         })
 
@@ -68,22 +68,8 @@ def load(file = None):
         print(object)
         newObject = eng.Object(pygame.Vector2(0, 0))
         newObject.Object.update(object["Position"][0], object["Position"][1], 32, 32)
-        newObject.Texture(object["Texture"])
+        newObject.Texture(object["ImageTexture"])
 
-def fillPreserve(surface, color):
-    w, h = surface.get_size()
-    r, g, b, _ = color
-    for x in range(w):
-        for y in range(h):
-            a = surface.get_at((x, y))[3]
-            surface.set_at((x, y), pygame.Color(r, g, b, a))
-
-def screenSpace(pos):
-    return np.array([
-        [1,0,pos.x],
-        [0,1,pos.y],
-        [0,0,1]]
-        )
 def screen_to_world(screen_x, screen_y):
     screen_width, screen_height = screen.get_width(), screen.get_height()
     scale_x, scale_y = cam.zoom, cam.zoom
@@ -105,6 +91,12 @@ def world_to_screen(world_x, world_y):
     
     return screen_x, screen_y
 
+mainBrush = eng.Brush()
+bucket = eng.Brush()
+def fill(pos):
+    pass
+bucket.paint = fill
+
 while running:
     screen.fill("black")
     #fillPreserve(preview, pygame.Color((255, 255, 255)))
@@ -113,6 +105,9 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.VIDEORESIZE:
+            surface = pygame.display.set_mode((event.w, event.h),
+                                              pygame.RESIZABLE)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w:
                 cam.keys["w"] = True
@@ -162,10 +157,7 @@ while running:
     pygame.event.get()
     if pygame.mouse.get_pressed()[0]:
         if colliding == False:
-            newObject = eng.Object(pygame.Vector2(0, 0))
-            newObject.Texture("assets/textures/blocks/brick.png")
-            world_x, world_y = screen_to_world(x, y)
-            newObject.Object.update(mouseWorld.x, mouseWorld.y, 32, 32)
+            mainBrush.paint(mouseWorld, "assets/textures/blocks/brick.png")
 
     elif pygame.mouse.get_pressed()[2]:
         if colliding == True:
@@ -204,6 +196,6 @@ while running:
 
     pygame.display.flip()
 
-    dt = clock.tick(60) / 1000
+    dt = clock.tick(144) / 1000
 
 pygame.quit()
