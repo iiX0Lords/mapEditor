@@ -1,6 +1,7 @@
 import pygame
 
 workspace = []
+ui = []
 class Object:
     def __init__(self, position):
         self.Position = position or pygame.Vector2()
@@ -23,6 +24,17 @@ class Entity(Object):
     def __init__(self, position):
         Object.__init__(self, position)
 
+class Frame:
+    def __init__(self, position = pygame.Vector2(0, 0)):
+        self.Position = position
+        ui.append(self)
+        self.Id = len(ui) - 1
+
+        self.Colour = pygame.Color(255, 255, 255)
+        self.Object = pygame.Rect(position.x, position.y, 10, 10)
+        self.Size = pygame.Vector2(50, 50)
+    def Destroy(self):
+        ui.pop(self.Id)
 
 class Camera():
     def __init__(self, position):

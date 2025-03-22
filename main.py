@@ -11,7 +11,9 @@ pygame.init()
 pygame.display.set_caption("Map qEditor")
 pygame.display.set_icon(pygame.image.load("icon.png"))
 
-screen = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
+base_width = 1280
+base_height = 720
+screen = pygame.display.set_mode((base_width, base_height), pygame.RESIZABLE)
 cam = eng.Camera(pygame.Vector2(0, 0))
 clock = pygame.time.Clock()
 
@@ -92,10 +94,27 @@ def world_to_screen(world_x, world_y):
     return screen_x, screen_y
 
 mainBrush = eng.Brush()
-bucket = eng.Brush()
-def fill(pos):
-    pass
-bucket.paint = fill
+
+selectionO = eng.Frame()
+selectionO.Size = pygame.Vector2(200, screen.get_height() - 20)
+selectionO.Object.x = 10
+selectionO.Object.y = 10
+selectionO.Colour = pygame.Color(28, 28, 28)
+
+selectionBG = eng.Frame()
+selectionBG.Size = pygame.Vector2(180, screen.get_height() - 40)
+selectionBG.Object.x = 20
+selectionBG.Object.y = 20
+selectionBG.Colour = pygame.Color(38, 38, 38)
+
+def updateUi():
+    scaleWidth = screen.get_width() / base_width
+    scaleHeight = screen.get_height() / base_height
+
+    for object in eng.ui:
+        object.Object.size = pygame.Vector2(int(object.Size.x * scaleWidth), int(object.Size.y * scaleHeight))
+
+        pygame.draw.rect(screen, object.Colour, object.Object)
 
 while running:
     screen.fill("black")
@@ -193,6 +212,9 @@ while running:
     previewPosition = position
 
     screen.blit(preview, (previewPosition.x, previewPosition.y))
+
+    #Render UI
+    updateUi()
 
     pygame.display.flip()
 
