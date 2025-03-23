@@ -1,10 +1,10 @@
 import pygame
 import eng
-import math
-import json
 import os
-import tkinter
-import tkinter.filedialog
+import scripts.filesystem as filesystem
+import scripts.helper as helper
+import scripts.inputManager as input
+import scripts.renderer as renderer
 
 pygame.init()
 
@@ -14,111 +14,54 @@ pygame.display.set_icon(pygame.image.load("icon.png"))
 base_width = 1280
 base_height = 720
 screen = pygame.display.set_mode((base_width, base_height), pygame.RESIZABLE)
-cam = eng.Camera(pygame.Vector2(0, 0))
-clock = pygame.time.Clock()
+hp = helper.init(screen)
 
 running = True
+clock = pygame.time.Clock()
 dt = 0
 
+cam = eng.Camera(pygame.Vector2(0, 0))
+hp.cam = cam
+
 preview = pygame.image.load("assets/textures/preview.png").convert_alpha()
+blocks = []
 
-def prompt_file(name = "exportedMap", write = False):
-    top = tkinter.Tk()
-    top.withdraw()
-    file_name = None
-    if write:
-        file_name = tkinter.filedialog.asksaveasfile(mode="w", initialfile = name+".json",filetypes = (("JSON files","*.json"),("All Files","*.*")),parent=top)
-    else:
-        file_name = tkinter.filedialog.askopenfile(mode="r",filetypes = (("JSON files","*.json"),("All Files","*.*")),parent=top)
-    top.destroy()
-    return file_name
-
-def snap(x, mult):
-    return math.floor((x / mult) + 0.5) * mult
-
-def export():
-
-    exportArray = []
-    for object in eng.workspace:
-        exportArray.append({
-            "Shape": object.Shape,
-            "Colour": (object.Colour.r, object.Colour.g, object.Colour.b),
-            "ImageTexture": object.ImageTexture,
-            "Position": (object.Object.x, object.Object.y)
-        })
-
-    file = prompt_file("exportedMap", True)
-    if file == None:
-        print("Didnt save")
-        return
-    file.write(json.dumps(exportArray))
-        
-def load(file = None):
-    if file == None:
-        file = prompt_file()
-        if file == None:
-            print("No file picked")
-            return
-        file = file.name
-    file = open(file, "r")
-    file = file.read()
-    openedArray = json.loads(file)
-
-    eng.workspace = []
-
-    for object in openedArray:
-        print(object)
-        newObject = eng.Object(pygame.Vector2(0, 0))
-        newObject.Object.update(object["Position"][0], object["Position"][1], 32, 32)
-        newObject.Texture(object["ImageTexture"])
-
-def screen_to_world(screen_x, screen_y):
-    screen_width, screen_height = screen.get_width(), screen.get_height()
-    scale_x, scale_y = cam.zoom, cam.zoom
-    camera_x, camera_y = cam.pos.x, cam.pos.y
-    normalized_x = (screen_x - screen_width / 2) / scale_x
-    normalized_y = (screen_y - screen_height / 2) / scale_y
-
-    world_x = normalized_x + camera_x
-    world_y = normalized_y + camera_y
-    
-    return world_x, world_y
-
-def world_to_screen(world_x, world_y):
-    screen_width, screen_height = screen.get_width(), screen.get_height()
-    scale_x, scale_y = cam.zoom, cam.zoom
-    camera_x, camera_y = cam.pos.x, cam.pos.y
-    screen_x = (world_x - camera_x) * scale_x + screen_width / 2
-    screen_y = (world_y - camera_y) * scale_y + screen_height / 2
-    
-    return screen_x, screen_y
+class Block:
+    def __init__(self, texture, name):
+        self.Texture = texture
+        self.Name = name
+        blocks.append(self)
+        self.Id = len(blocks) - 1
 
 mainBrush = eng.Brush()
 
-selectionO = eng.Frame()
-selectionO.Size = pygame.Vector2(200, screen.get_height() - 20)
-selectionO.Object.x = 10
-selectionO.Object.y = 10
-selectionO.Colour = pygame.Color(28, 28, 28)
+for name in os.listdir("assets/textures/blocks"):
+    Name = name.replace(".png", "")
+    Name = Name.capitalize()
+    Block("assets/textures/"+name, Name)
 
-selectionBG = eng.Frame()
-selectionBG.Size = pygame.Vector2(180, screen.get_height() - 40)
-selectionBG.Object.x = 20
-selectionBG.Object.y = 20
-selectionBG.Colour = pygame.Color(38, 38, 38)
 
-def updateUi():
-    scaleWidth = screen.get_width() / base_width
-    scaleHeight = screen.get_height() / base_height
+# Init Functions
 
-    for object in eng.ui:
-        object.Object.size = pygame.Vector2(int(object.Size.x * scaleWidth), int(object.Size.y * scaleHeight))
+def file(key):
+    if key.Key == pygame.K_k:
+        filesystem.export()
+    elif key.Key == pygame.K_l:
+        filesystem.load()
 
-        pygame.draw.rect(screen, object.Colour, object.Object)
+def registerMovement():
+    up = input.Input(pygame.K_w); up.OnDown = cam.Move; up.OnUp = cam.Stop
+    down = input.Input(pygame.K_s); down.OnDown = cam.Move; down.OnUp = cam.Stop
+    right = input.Input(pygame.K_d); right.OnDown = cam.Move; right.OnUp = cam.Stop
+    left = input.Input(pygame.K_a); left.OnDown = cam.Move; left.OnUp = cam.Stop
 
+    export = input.Input(pygame.K_k); export.OnDown = file
+    load = input.Input(pygame.K_l); load.OnDown = file
+registerMovement()
+
+# Main Loop
 while running:
     screen.fill("black")
-    #fillPreserve(preview, pygame.Color((255, 255, 255)))
 
 
     for event in pygame.event.get():
@@ -127,28 +70,6 @@ while running:
         if event.type == pygame.VIDEORESIZE:
             surface = pygame.display.set_mode((event.w, event.h),
                                               pygame.RESIZABLE)
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w:
-                cam.keys["w"] = True
-            elif event.key == pygame.K_s:
-                cam.keys["s"] = True
-            if event.key == pygame.K_a:
-                cam.keys["a"] = True
-            elif event.key == pygame.K_d:
-                cam.keys["d"] = True
-            elif event.key == pygame.K_k:
-                export()
-            elif event.key == pygame.K_l:
-                load()
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_w:
-                cam.keys["w"] = False
-            elif event.key == pygame.K_s:
-                cam.keys["s"] = False
-            if event.key == pygame.K_a:
-                cam.keys["a"] = False
-            elif event.key == pygame.K_d:
-                cam.keys["d"] = False
         if event.type == pygame.MOUSEWHEEL:
             cam.zoom += event.y / 10
             if cam.zoom >= 2.0:
@@ -156,6 +77,8 @@ while running:
             elif cam.zoom <= 0.2:
                 cam.zoom = 0.2
             print(cam.zoom)
+
+        input.HandleInputs(event)
 
     x,y = pygame.mouse.get_pos()
     x = x - (preview.get_width() / 2)
@@ -165,11 +88,10 @@ while running:
 
     cam.update()
     
-    mouseWorld = pygame.Vector2(screen_to_world(x, y))
-    mouseWorld = pygame.Vector2(snap(mouseWorld.x, 32), snap(mouseWorld.y, 32))
-    position = pygame.Vector2(world_to_screen(mouseWorld.x, mouseWorld.y))
+    mouseWorld = pygame.Vector2(hp.screen_to_world(x, y)); mouseWorld = pygame.Vector2(hp.snap(mouseWorld.x, 32), hp.snap(mouseWorld.y, 32))
+    position = pygame.Vector2(hp.world_to_screen(mouseWorld.x, mouseWorld.y))
 
-    for object in eng.workspace:
+    for object in renderer.workspace:
         if object.Object.collidepoint(mouseWorld.x, mouseWorld.y):
             colliding = True
 
@@ -180,31 +102,13 @@ while running:
 
     elif pygame.mouse.get_pressed()[2]:
         if colliding == True:
-            for object in eng.workspace:
+            for object in renderer.workspace:
                 if object.Object.x == mouseWorld.x and object.Object.y == mouseWorld.y:
-                    index = eng.workspace.index(object)
-                    eng.workspace.pop(index)
+                    index = renderer.workspace.index(object)
+                    renderer.workspace.pop(index)
 
     #Render Objects
-    for object in eng.workspace:
-        if object.Shape == "Rectangle":
-            if not object.ImageTexture == None:
-                local = pygame.Vector2(world_to_screen(object.Object.x, object.Object.y))
-                if local.x < 0 or local.x > screen.get_width():
-                    continue
-                if local.y < 0 or local.y > screen.get_height():
-                    continue
-                surfaceObject = object.Image
-
-                surfaceObject = pygame.transform.scale(surfaceObject, pygame.Vector2(object.Object.w * cam.zoom, object.Object.h * cam.zoom))
-                zoomPos = pygame.Vector2(world_to_screen(object.Object.x, object.Object.y))
-                screen.blit(surfaceObject, (
-                zoomPos.x
-                ,
-                zoomPos.y
-                ))
-        elif object.Shape == "Circle":
-            pass
+    renderer.Render(screen, cam, hp)
 
     preview.set_alpha(150)
     preview = pygame.transform.scale(preview, pygame.Vector2(32 * cam.zoom, 32 * cam.zoom))
@@ -213,8 +117,6 @@ while running:
 
     screen.blit(preview, (previewPosition.x, previewPosition.y))
 
-    #Render UI
-    updateUi()
 
     pygame.display.flip()
 
